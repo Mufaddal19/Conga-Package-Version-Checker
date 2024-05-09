@@ -10,7 +10,7 @@ table {
     border: 1px solid rgb(95, 29, 29);
   }
 
-  #myInput {
+  #myInput, #searchTrigger {
     background-position: 10px 12px; /* Position the search icon */
     background-repeat: no-repeat; /* Do not repeat the icon image */
     width: 100%; /* Full-width */
@@ -20,7 +20,7 @@ table {
     margin-bottom: 12px; /* Add some space below the input */
   }
 
-  #message1 {
+  #message1, table {
     border-collapse: collapse; /* Collapse borders */
     width: 100%; /* Full-width */
     border: 1px solid #ddd; /* Add a grey border */

@@ -9,24 +9,33 @@
     <body style="width: 700px;">
 
         <div id="txt" style="text-align: center; color:red;">
-            <p  style="text-align: center; color:red;">
+            <p style="text-align: center; color:red;">
                 Please click this from a valid salesforce logged in tab <br>
             </p>
         </div>
 
-
-            <center>
-                <!-- When user is inside SFDC Logged IN page -->
+        <center>
+            <!-- When user is inside SFDC Logged IN page -->
+            <div id="actions" style="margin-bottom: 20px;">
                 <button id="btn" style="visibility: hidden;">
-                View Packages
+                    View Packages
                 </button>
-                <br>
-                <br>
-                
-                <input type="text" id="myInput" placeholder="Search for Package Name..." style="visibility: hidden;">
-                <table id="message1">
-                </table>
-            </center>
+                <button id="ViewTriggersBtn" style="visibility: hidden;">
+                    View Agreement Triggers
+                </button>
+            </div>
+            
+            <div id="Container">
+                <div id="packagesContainer">
+                    <input type="text" id="myInput" placeholder="Search for Package Name..." />
+                    <table id="message1"></table>
+                </div>
+                <div id="triggersContainer" style="display: none;">
+                    <input type="text" id="searchTrigger" placeholder="Search for Trigger Name" />
+                    <table id="triggersTable"></table>
+                </div>
+            </div>
+        </center>
 
         <script src="popup.js"></script>
     </body>
