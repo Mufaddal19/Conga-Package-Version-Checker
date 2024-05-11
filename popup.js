@@ -12,6 +12,10 @@ try {
 let excluderegex =
   /(login|help|developer|success|appexchange|partners|test).salesforce.com/;
 function getcookie() {
+  if(window.location.pathname == '/popup.html' && window.location.search.includes('host')) {
+    let host = new URLSearchParams(window.location.search).get('host');
+    instanceUrl = host;
+  }
   chrome.tabs.query({ currentWindow: true, active: true }, (resp) => {
     let tab = resp[0];
 
@@ -23,11 +27,14 @@ function getcookie() {
     if (
       tab.url &&
       (tab.url.includes(".lightning.force.com") ||
-        tab.url.includes(".salesforce.com"))
+        tab.url.includes(".salesforce.com")) || 
+        instanceUrl
     ) {
-      let url = tab.url.replace("https://", "").split("/")[0];
-      url = url.replace(".lightning.force.com", ".my.salesforce.com");
-      instanceUrl = "https://" + url;
+      if (!instanceUrl) {
+        let url = tab.url.replace("https://", "").split("/")[0];
+        url = url.replace(".lightning.force.com", ".my.salesforce.com");
+        instanceUrl = "https://" + url;
+      }
       console.log(instanceUrl);
       let port = chrome.runtime.connect({ name: "Get Session" });
       port.postMessage(instanceUrl.replace("https://", ""));
@@ -262,6 +269,10 @@ function sendTableToBackground() {
 }
 
 function ToggleTriggerContainer() {
+  if(window.location.search == "") {
+    let urlString = chrome.runtime.getURL('popup.html') + '?host=' + encodeURIComponent(instanceUrl);
+    chrome.tabs.create({url: urlString});
+  }
   // console.log('inside toggle trigger table function');
   let display = document.getElementById("triggersContainer");
   if(display.style.display !== "none") {
