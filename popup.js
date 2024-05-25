@@ -1,59 +1,73 @@
 var conn = null;
 var sessionId = null;
 var instanceUrl = null;
-let text = "<table> <tr> <th>Package Name</th> <th>NameSpace Prefix</th>   <th>Version Number</th> </tr>"
+let text =
+  "<table> <tr> <th>Package Name</th> <th>NameSpace Prefix</th>   <th>Version Number</th> </tr>";
 
 try {
-    console.log("Inside Popup JS");
-    getcookie();
-  } catch (error) {}
+  console.log("Inside Popup JS");
+  getcookie();
+} catch (error) {}
 
-  let excluderegex =
-    /(login|help|developer|success|appexchange|partners|test).salesforce.com/;
-  function getcookie() {
+let excluderegex =
+  /(login|help|developer|success|appexchange|partners|test).salesforce.com/;
+function getcookie() {
+  if(window.location.pathname == '/popup.html' && window.location.search.includes('host')) {
+    let host = new URLSearchParams(window.location.search).get('host');
+    instanceUrl = host;
+  }
+  chrome.tabs.query({ currentWindow: true, active: true }, (resp) => {
+    let tab = resp[0];
 
-    chrome.tabs.query({ currentWindow: true, active: true }, (resp) => {
-      let tab = resp[0];
-      
-      if(tab.url && tab.url.includes('.vf.force.com')){
-        let div = document.getElementById('txt');
-        div.innerText = 'Please move to a Record page or Home page';
+    if (tab.url && tab.url.includes(".vf.force.com")) {
+      let div = document.getElementById("txt");
+      div.innerText = "Please move to a Record page or Home page";
+    }
+
+    if (
+      tab.url &&
+      (tab.url.includes(".lightning.force.com") ||
+        tab.url.includes(".salesforce.com")) || 
+        instanceUrl
+    ) {
+      if (!instanceUrl) {
+        let url = tab.url.replace("https://", "").split("/")[0];
+        url = url.replace(".lightning.force.com", ".my.salesforce.com");
+        instanceUrl = "https://" + url;
       }
-
-      if(tab.url && (tab.url.includes('.lightning.force.com') || tab.url.includes('.salesforce.com'))){
-         
-        let url = tab.url.replace('https://','').split('/')[0]
-        url = url.replace('.lightning.force.com','.my.salesforce.com')
-        instanceUrl = 'https://' + url
-        console.log(instanceUrl);
-        let port = chrome.runtime.connect({ name: "Get Session" });
-        port.postMessage( instanceUrl.replace('https://','') );
-        port.onMessage.addListener(function(sessionId) {
+      console.log(instanceUrl);
+      let port = chrome.runtime.connect({ name: "Get Session" });
+      port.postMessage(instanceUrl.replace("https://", ""));
+      port.onMessage.addListener(function (sessionId) {
         console.log(sessionId);
         conn = new jsforce.Connection({
-              serverUrl: instanceUrl,
-              instanceUrl: instanceUrl,
-              sessionId: sessionId,
-              version: '50.0',
-          });//jsforce
+          serverUrl: instanceUrl,
+          instanceUrl: instanceUrl,
+          sessionId: sessionId,
+          version: "50.0",
+        }); //jsforce
 
-          console.log(conn);
-          //window.close();
-          
-          console.log("Removing content inside 'txt' id element");
-              let div = document.getElementById('txt');
-              if (div) {
-                div.parentNode.removeChild(div);
-              }
-              // Unhide the View Packages Button on Popup HTML
-              let btn = document.getElementById('btn');
-              btn.setAttribute("style", "visibility: visible");
+        console.log("successfully connected to JSForce" + conn);
+        //window.close();
 
-          fetchPackageFromOrg();
-        })
-      }
+        console.log("Removing content inside 'txt' id element");
+        let div = document.getElementById("txt");
+        if (div) {
+          div.parentNode.removeChild(div);
+        }
+        // Unhide the View Packages Button on Popup HTML
+        let btn = document.getElementById("btn");
+        btn.setAttribute("style", "visibility: visible");
+
+        let viewTriggersButton = document.getElementById("ViewTriggersBtn");
+        viewTriggersButton.setAttribute("style", "visibility: visible");
+
+        fetchPackageFromOrg();
+        fetchTriggersOnAgreementObjectFromOrg();
     })
-  }
+    }
+});
+}
 /*
       if(tab.url.includes(".sandbox.")){
 
@@ -113,54 +127,125 @@ try {
     });
   }
 */
-function fetchPackageFromOrg(){
-  console.log("Inside Fetch Package Funtion")
-  conn.tooling.query("select id, SubscriberPackage.NamespacePrefix, SubscriberPackage.Name, SubscriberPackageVersion.Name, SubscriberPackageVersion.MajorVersion, SubscriberPackageVersion.MinorVersion, SubscriberPackageVersion.PatchVersion from InstalledSubscriberPackage", function(err, result) {
-    if (err) { return console.error(err); }
-    console.log(result);
-    for (var i=0; i < result.records.length; i++) {
-    var PackageRow = result.records[i].SubscriberPackage.Name + "\t"+ result.records[i].SubscriberPackage.NamespacePrefix + "\t" + result.records[i].SubscriberPackageVersion.Name
-    console.log(PackageRow);
+function fetchPackageFromOrg() {
+  console.log("Inside Fetch Package Funtion");
+  conn.tooling.query(
+    "select id, SubscriberPackage.NamespacePrefix, SubscriberPackage.Name, SubscriberPackageVersion.Name, SubscriberPackageVersion.MajorVersion, SubscriberPackageVersion.MinorVersion, SubscriberPackageVersion.PatchVersion from InstalledSubscriberPackage",
+    function (err, result) {
+      if (err) {
+        return console.error(err);
+      }
+      console.log(result);
+      for (var i = 0; i < result.records.length; i++) {
+        var PackageRow =
+          result.records[i].SubscriberPackage.Name +
+          "\t" +
+          result.records[i].SubscriberPackage.NamespacePrefix +
+          "\t" +
+          result.records[i].SubscriberPackageVersion.Name;
+        console.log(PackageRow);
 
-    if(result.records[i].SubscriberPackageVersion.PatchVersion != '0'){
-    var versionnumber = result.records[i].SubscriberPackageVersion.MajorVersion + "." + result.records[i].SubscriberPackageVersion.MinorVersion + "." + result.records[i].SubscriberPackageVersion.PatchVersion;
-    }
-    else{
-    var versionnumber = result.records[i].SubscriberPackageVersion.MajorVersion + "." + result.records[i].SubscriberPackageVersion.MinorVersion;
-    }
-
-    let check = result.records[i].SubscriberPackage.NamespacePrefix;
-    if(check != null)
-        {
-           // var check1 = check.includes('Apttus');
-            // var check2 = check.includes("Conga");
-            //  var check3 = check.includes("APTX")
-
-            if( check.includes('Apttus') || check.includes("cnga") || check.includes("Conga") || check.includes("APTX") || check.includes("CRMC_PP") || check.includes("APXT") || check.includes("FSTR")){
-              //console.log(toolingAPIResponse.records[i].SubscriberPackage.Name);
-              text += "<tr><td>" + result.records[i].SubscriberPackage.Name + "</td><td>" + result.records[i].SubscriberPackage.NamespacePrefix + "</td><td>" + versionnumber + "</td></tr>";
-            }
-          }    
+        if (result.records[i].SubscriberPackageVersion.PatchVersion != "0") {
+          var versionnumber =
+            result.records[i].SubscriberPackageVersion.MajorVersion +
+            "." +
+            result.records[i].SubscriberPackageVersion.MinorVersion +
+            "." +
+            result.records[i].SubscriberPackageVersion.PatchVersion;
+        } else {
+          var versionnumber =
+            result.records[i].SubscriberPackageVersion.MajorVersion +
+            "." +
+            result.records[i].SubscriberPackageVersion.MinorVersion;
         }
-        text += "</table>";
-        console.log(text);
-        sendTableToBackground(text);
-      });
-    
-  }
 
-function sendTableToBackground(text){
+        let check = result.records[i].SubscriberPackage.NamespacePrefix;
+        if (check != null) {
+          // var check1 = check.includes('Apttus');
+          // var check2 = check.includes("Conga");
+          //  var check3 = check.includes("APTX")
 
-  document.getElementById("btn").addEventListener("click", function() {
-    
-    let searchBar = document.getElementById('myInput');
-    searchBar.setAttribute("style", "visibility: visible");
-
-    var tableContainer = document.getElementById("message1");
-    console.log(tableContainer)
-          if (tableContainer) {
-              tableContainer.innerHTML = text;
+          if (
+            check.includes("Apttus") ||
+            check.includes("cnga") ||
+            check.includes("Conga") ||
+            check.includes("APTX") ||
+            check.includes("CRMC_PP") ||
+            check.includes("APXT") ||
+            check.includes("FSTR")
+          ) {
+            //console.log(toolingAPIResponse.records[i].SubscriberPackage.Name);
+            text +=
+              "<tr><td>" +
+              result.records[i].SubscriberPackage.Name +
+              "</td><td>" +
+              result.records[i].SubscriberPackage.NamespacePrefix +
+              "</td><td>" +
+              versionnumber +
+              "</td></tr>";
           }
+        }
+      }
+      text += "</table>";
+      console.log(text);
+      sendTableToBackground();
+      var tableContainer = document.getElementById("message1");
+      console.log(tableContainer);
+      if (tableContainer) {
+        tableContainer.innerHTML = text;
+      }
+    }
+  );  
+}
+
+function fetchTriggersOnAgreementObjectFromOrg() {
+  // console.log("Ayush Edit starts");
+  conn.tooling.query(
+    `SELECT Name, TableEnumOrId, ApiVersion, Status FROM ApexTrigger WHERE TableEnumOrId = 'Apttus__APTS_Agreement__c'`,
+    function (err, result) {
+      if (err) console.log("error in Ayush Edit: " + err);
+      // console.log("Success in Ayush Edit: " + result);
+      console.log(result);
+      renderTriggersTable(result.records);
+    }
+  );
+}
+
+function renderTriggersTable(data) {
+  console.log('Inside Render Triggers Table function');
+  var keys = ['Name', 'ApiVersion', 'Status']; // Selected keys
+  var table = document.getElementById('triggersTable');
+  var header = table.createTHead().insertRow();
+  header.insertCell().outerHTML = '<th>Name</th>';
+  header.insertCell().outerHTML = '<th>API Version</th>';
+  header.insertCell().outerHTML = '<th>Status</th>';
+  var body = table.createTBody();
+  data.forEach(function(obj) {
+      var row = body.insertRow();
+      keys.forEach(function(key) {
+          var cell = row.insertCell();
+          cell.innerHTML = obj[key];
+      });
+  });
+}
+
+function sendTableToBackground() {
+  document.getElementById("btn").addEventListener("click", function () {
+    let packagesContainer = document.getElementById("packagesContainer");
+    if(packagesContainer.style.display !== "none") {
+      packagesContainer.style.display = "none";
+    } else {
+      packagesContainer.style.display = "block";
+    }
+    document.getElementById("triggersContainer").style.display = "none";
+    // let searchBar = document.getElementById("myInput");
+    // searchBar.setAttribute("style", "visibility: visible");
+
+    // var tableContainer = document.getElementById("message1");
+    // console.log(tableContainer);
+    // if (tableContainer) {
+    //   tableContainer.innerHTML = text;
+    // }
 
     /*
     window.open(
@@ -177,15 +262,37 @@ function sendTableToBackground(text){
       port.postMessage(dataToSend); 
     });
     */
-})
+  });
+
+  //View Triggers
+  document.getElementById("ViewTriggersBtn").addEventListener("click", ToggleTriggerContainer);
+}
+
+function ToggleTriggerContainer() {
+  if(window.location.search == "") {
+    let urlString = chrome.runtime.getURL('popup.html') + '?host=' + encodeURIComponent(instanceUrl);
+    chrome.tabs.create({url: urlString});
+  }
+  // console.log('inside toggle trigger table function');
+  let display = document.getElementById("triggersContainer");
+  if(display.style.display !== "none") {
+    display.style.display = "none";
+  } else {
+    display.style.display = "block";
+  }
+  document.getElementById("packagesContainer").style.display = "none";
 }
 
 document.addEventListener("DOMContentLoaded", function () {
-
   var searchInput = document.getElementById("myInput");
+  var searchTriggerInput = document.getElementById("searchTrigger");
 
   if (searchInput) {
     searchInput.addEventListener("keyup", myFunction);
+  }
+
+  if(searchTriggerInput) {
+    searchTriggerInput.addEventListener("keyup", searchTriggers)
   }
 
   function myFunction() {
@@ -196,24 +303,57 @@ document.addEventListener("DOMContentLoaded", function () {
     filter = input.value.toUpperCase();
     table = document.getElementById("message1");
     tr = table.getElementsByTagName("tr");
-    
+
     // Loop through all table rows, and hide those who don't match the search query
     for (i = 0; i < tr.length; i++) {
       console.log("Started");
       td = tr[i].getElementsByTagName("td")[0];
       td1 = tr[i].getElementsByTagName("td")[1];
       if (td || td1) {
-      txtValue1 = td.textContent || td.innerText;
-      txtValue2 = td1.textContent || td1.innerText;
-      if (txtValue1.toUpperCase().indexOf(filter) > -1 || txtValue2.toUpperCase().indexOf(filter) > -1) {
-        tr[i].style.display = "";
-      } else {
-        tr[i].style.display = "none";
+        txtValue1 = td.textContent || td.innerText;
+        txtValue2 = td1.textContent || td1.innerText;
+        if (
+          txtValue1.toUpperCase().indexOf(filter) > -1 ||
+          txtValue2.toUpperCase().indexOf(filter) > -1
+        ) {
+          tr[i].style.display = "";
+        } else {
+          tr[i].style.display = "none";
+        }
       }
     }
   }
+});
+
+function searchTriggers() {
+  var input, filter, table, tr, td, td1, td2, i, txtValue1, txtValue2, txtValue3;
+    input = document.getElementById("searchTrigger");
+    searchString = input.value.toUpperCase();
+    table = document.getElementById("triggersTable");
+    tr = table.getElementsByTagName("tr");
+
+    // Loop through all table rows, and hide those who don't match the search query
+    for (i = 0; i < tr.length; i++) {
+      console.log("Started");
+      td = tr[i].getElementsByTagName("td")[0];
+      td1 = tr[i].getElementsByTagName("td")[1];
+      td2 = tr[i].getElementsByTagName("td")[2];
+      if (td || td1 || td2) {
+        txtValue1 = td.textContent || td.innerText;
+        txtValue2 = td1.textContent || td1.innerText;
+        txtValue3 = td2.textContent || td2.innerText;
+        if (
+          txtValue1.toUpperCase().indexOf(searchString) > -1 ||
+          txtValue2.toUpperCase().indexOf(searchString) > -1 ||
+          txtValue3.toUpperCase().indexOf(searchString) > -1 
+        ) {
+          tr[i].style.display = "";
+        } else {
+          tr[i].style.display = "none";
+        }
+      }
+    }
 }
-})
 
 /*
 document.addEventListener("DOMContentLoaded", function () {
