@@ -201,7 +201,17 @@ function fetchPackageFromOrg() {
 function fetchTriggersOnAgreementObjectFromOrg() {
   // console.log("Ayush Edit starts");
   conn.tooling.query(
-    `SELECT Name, TableEnumOrId, ApiVersion, Status FROM ApexTrigger WHERE TableEnumOrId = 'Apttus__APTS_Agreement__c'`,
+    `SELECT Id, Name, TableEnumOrId, ApiVersion, Status
+    FROM ApexTrigger
+    WHERE TableEnumOrId IN (
+      'Apttus__APTS_Agreement__c',
+      'Apttus__AgreementLineItem__c',
+      'Apttus__DocumentVersion__c',
+      'Apttus__DocumentVersionDetail__c',
+      'Apttus__APTS_Template__c',
+      'Apttus__CycleTimeGroupData__c'
+    )
+    AND NamespacePrefix = null`,
     function (err, result) {
       if (err) console.log("error in Ayush Edit: " + err);
       // console.log("Success in Ayush Edit: " + result);
@@ -213,18 +223,37 @@ function fetchTriggersOnAgreementObjectFromOrg() {
 
 function renderTriggersTable(data) {
   console.log('Inside Render Triggers Table function');
-  var keys = ['Name', 'ApiVersion', 'Status']; // Selected keys
-  var table = document.getElementById('triggersTable');
-  var header = table.createTHead().insertRow();
+  const objects = {
+    Apttus__APTS_Agreement__c: "Agreement",
+    Apttus__AgreementLineItem__c: "Agreement Line Item",
+    Apttus__DocumentVersion__c: "Document Version",
+    Apttus__DocumentVersionDetail__c: "Document Version Detail",
+    Apttus__APTS_Template__c: "Template",
+    Apttus__CycleTimeGroupData__c: "Cycle Time Group Data"
+  };
+  const keys = ['Name', 'TableEnumOrId', 'ApiVersion', 'Status']; // Selected keys
+  let table = document.getElementById('triggersTable');
+  let header = table.createTHead().insertRow();
   header.insertCell().outerHTML = '<th>Name</th>';
+  header.insertCell().outerHTML = '<th>Object</th>';
   header.insertCell().outerHTML = '<th>API Version</th>';
   header.insertCell().outerHTML = '<th>Status</th>';
-  var body = table.createTBody();
+  let body = table.createTBody();
   data.forEach(function(obj) {
-      var row = body.insertRow();
+      let row = body.insertRow();
       keys.forEach(function(key) {
-          var cell = row.insertCell();
-          cell.innerHTML = obj[key];
+        let cell = row.insertCell();
+        if(key == 'Name') {
+          let triggerLinkElement = document.createElement('a');
+          triggerLinkElement.href = instanceUrl + '/lightning/setup/ApexTriggers/page?address=%2F' + obj['Id'];
+          triggerLinkElement.target = 'blank';
+          triggerLinkElement.text = obj[key];
+          cell.appendChild(triggerLinkElement);
+        }  else if (key == 'TableEnumOrId') {
+            cell.innerHTML = objects[obj[key]];
+        } else {
+            cell.innerHTML = obj[key];
+          }
       });
   });
 }
@@ -286,13 +315,18 @@ function ToggleTriggerContainer() {
 document.addEventListener("DOMContentLoaded", function () {
   var searchInput = document.getElementById("myInput");
   var searchTriggerInput = document.getElementById("searchTrigger");
+  var triggerFilterObject = document.getElementById("Object");
 
   if (searchInput) {
     searchInput.addEventListener("keyup", myFunction);
   }
 
   if(searchTriggerInput) {
-    searchTriggerInput.addEventListener("keyup", searchTriggers)
+    searchTriggerInput.addEventListener("keyup", () => searchTriggers(false));
+  }
+
+  if(triggerFilterObject) {
+    triggerFilterObject.addEventListener("input", () => searchTriggers(true));
   }
 
   function myFunction() {
@@ -325,34 +359,37 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 });
 
-function searchTriggers() {
-  var input, filter, table, tr, td, td1, td2, i, txtValue1, txtValue2, txtValue3;
-    input = document.getElementById("searchTrigger");
-    searchString = input.value.toUpperCase();
-    table = document.getElementById("triggersTable");
-    tr = table.getElementsByTagName("tr");
+function searchTriggers(calledFromFilterObject) {
+  let input, table, tr, td, td1, td2, td3, i, txtValue1, txtValue2, txtValue3, txtValue4;
+  calledFromFilterObject ? input = document.getElementById("Object") : input = document.getElementById("searchTrigger");
+  searchString = input.value.toUpperCase();
+  table = document.getElementById("triggersTable");
+  tr = table.getElementsByTagName("tr");
 
-    // Loop through all table rows, and hide those who don't match the search query
-    for (i = 0; i < tr.length; i++) {
-      console.log("Started");
-      td = tr[i].getElementsByTagName("td")[0];
-      td1 = tr[i].getElementsByTagName("td")[1];
-      td2 = tr[i].getElementsByTagName("td")[2];
-      if (td || td1 || td2) {
-        txtValue1 = td.textContent || td.innerText;
-        txtValue2 = td1.textContent || td1.innerText;
-        txtValue3 = td2.textContent || td2.innerText;
-        if (
-          txtValue1.toUpperCase().indexOf(searchString) > -1 ||
-          txtValue2.toUpperCase().indexOf(searchString) > -1 ||
-          txtValue3.toUpperCase().indexOf(searchString) > -1 
-        ) {
-          tr[i].style.display = "";
-        } else {
-          tr[i].style.display = "none";
-        }
+  // Loop through all table rows, and hide those who don't match the search query
+  for (i = 0; i < tr.length; i++) {
+    console.log("Started");
+    td = tr[i].getElementsByTagName("td")[0];
+    td1 = tr[i].getElementsByTagName("td")[1];
+    td2 = tr[i].getElementsByTagName("td")[2];
+    td3 = tr[i].getElementsByTagName("td")[3];
+    if (td || td1 || td2 || td3) {
+      txtValue1 = td.textContent || td.innerText;
+      txtValue2 = td1.textContent || td1.innerText;
+      txtValue3 = td2.textContent || td2.innerText;
+      txtValue4 = td3.textContent || td3.innerText;
+      if (
+        txtValue1.toUpperCase().indexOf(searchString) > -1 ||
+        txtValue2.toUpperCase().indexOf(searchString) > -1 ||
+        txtValue3.toUpperCase().indexOf(searchString) > -1 ||
+        txtValue4.toUpperCase().indexOf(searchString) > -1 
+      ) {
+        tr[i].style.display = "";
+      } else {
+        tr[i].style.display = "none";
       }
     }
+  }
 }
 
 /*

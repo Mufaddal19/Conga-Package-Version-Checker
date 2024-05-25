@@ -21,7 +21,7 @@
                     View Packages
                 </button>
                 <button id="ViewTriggersBtn" style="visibility: hidden;">
-                    View Agreement Triggers
+                    View Triggers
                 </button>
             </div>
             
@@ -31,7 +31,27 @@
                     <table id="message1"></table>
                 </div>
                 <div id="triggersContainer" style="display: none;">
-                    <input type="text" id="searchTrigger" placeholder="Search for Trigger Name" />
+                    <div id="triggersFilter">
+                        <label id="triggersFilterLabel">Filter</label>
+                        <div class="triggerFilterContainer">
+                            <span class="triggerFilterObjectContainer">
+                                <label for="Object">Object:</label>
+                                <select name="Object" id="Object">
+                                    <option value="" selected></option>
+                                    <option value="Agreement">Agreement</option>
+                                    <option value="Agreement Line Item">Agreement Line Item</option>
+                                    <option value="Document Version">Document Version</option>
+                                    <option value="Document Version Detail">Document Version Detail</option>
+                                    <option value="Template">Template</option>
+                                    <option value="Cycle Time Group Data">Cycle Time Group Data</option>
+                                </select>
+                            </span>
+                            <span class="triggerFilterSearch">
+                                <label for="searchTrigger">Search</label>
+                                <input type="text" id="searchTrigger" placeholder="Search for Trigger Name..." />
+                            </span>
+                        </div>
+                    </div>
                     <table id="triggersTable"></table>
                 </div>
             </div>
