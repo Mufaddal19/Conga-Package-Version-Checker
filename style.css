@@ -1,7 +1,10 @@
+body {
+  font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+}
+
 table {
     border: 1px solid rgb(114, 45, 45);
     color: rgb(14, 17, 17);
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
   }
 
   th, td {
@@ -10,7 +13,7 @@ table {
     border: 1px solid rgb(95, 29, 29);
   }
 
-  #myInput, #searchTrigger {
+  #myInput {
     background-position: 10px 12px; /* Position the search icon */
     background-repeat: no-repeat; /* Do not repeat the icon image */
     width: 100%; /* Full-width */
@@ -36,3 +39,53 @@ tr.header, tr:hover {
     /* Add a grey background color to the table header and on hover */
     background-color: #75a1b6;
   }
+
+#triggersFilter {
+    position: relative;
+    border: 1px solid rgb(114, 45, 45);
+    margin-bottom: 20px;
+    background-color: #f9f9f9; /* Light background color */
+    padding: 10px; /* Add padding */
+}
+
+#triggersFilterLabel {
+    position: absolute;
+    left: 10px;
+    top: -10px;
+    background-color: #fff; /* White background color for label */
+    padding: 0 5px; /* Add padding */
+    font-size: 14px;
+}
+
+.triggerFilterContainer, .triggerFilterSearch {
+    display: flex;
+    align-items: center; /* Center vertically */
+}
+
+.triggerFilterObjectContainer,
+.triggerFilterSearch {
+    margin: 0 5px; /* Add margin between elements */
+}
+
+.triggerFilterObjectContainer label,
+.triggerFilterSearch label {
+    margin-right: 5px; /* Add margin between label and input/select */
+    font-size: 16px;
+}
+
+#Object,
+#searchTrigger {
+    flex: 1; /* Equal width for both inputs */
+    padding: 8px; /* Adjust padding */
+    border: 1px solid #ccc; /* Add border */
+    border-radius: 0; /* Remove border radius */
+    font-size: 16px;
+}
+
+.triggerFilterSearch input[type="text"] {
+    width: calc(100% - 24px); /* Calculate width considering padding */
+}
+
+.triggerFilterSearch input[type="text"]::placeholder {
+    color: #999; /* Placeholder text color */
+}
