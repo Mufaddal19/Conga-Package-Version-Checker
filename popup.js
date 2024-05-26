@@ -210,8 +210,9 @@ function fetchTriggersOnAgreementObjectFromOrg() {
       'Apttus__DocumentVersionDetail__c',
       'Apttus__APTS_Template__c',
       'Apttus__CycleTimeGroupData__c'
-    )
-    AND NamespacePrefix = null`,
+    )`,
+    // )
+    // AND NamespacePrefix = null`,
     function (err, result) {
       if (err) console.log("error in Ayush Edit: " + err);
       // console.log("Success in Ayush Edit: " + result);
@@ -326,7 +327,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   if(triggerFilterObject) {
-    triggerFilterObject.addEventListener("input", () => searchTriggers(true));
+    triggerFilterObject.addEventListener("input", filterTriggers);
   }
 
   function myFunction() {
@@ -359,9 +360,9 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 });
 
-function searchTriggers(calledFromFilterObject) {
-  let input, table, tr, td, td1, td2, td3, i, txtValue1, txtValue2, txtValue3, txtValue4;
-  calledFromFilterObject ? input = document.getElementById("Object") : input = document.getElementById("searchTrigger");
+function searchTriggers() {
+  let input, table, tr, td, td1, td2, td3, i, txtValue1, txtValue2, txtValue3;
+  input = document.getElementById("searchTrigger");
   searchString = input.value.toUpperCase();
   table = document.getElementById("triggersTable");
   tr = table.getElementsByTagName("tr");
@@ -369,21 +370,40 @@ function searchTriggers(calledFromFilterObject) {
   // Loop through all table rows, and hide those who don't match the search query
   for (i = 0; i < tr.length; i++) {
     console.log("Started");
-    td = tr[i].getElementsByTagName("td")[0];
-    td1 = tr[i].getElementsByTagName("td")[1];
-    td2 = tr[i].getElementsByTagName("td")[2];
-    td3 = tr[i].getElementsByTagName("td")[3];
+    td = tr[i].getElementsByTagName("td")[0]; // Trigger Name 
+    td2 = tr[i].getElementsByTagName("td")[2]; // Trigger API Version
+    td3 = tr[i].getElementsByTagName("td")[3]; // Trigger Status
     if (td || td1 || td2 || td3) {
       txtValue1 = td.textContent || td.innerText;
-      txtValue2 = td1.textContent || td1.innerText;
-      txtValue3 = td2.textContent || td2.innerText;
-      txtValue4 = td3.textContent || td3.innerText;
+      txtValue2 = td2.textContent || td2.innerText;
+      txtValue3 = td3.textContent || td3.innerText;
       if (
         txtValue1.toUpperCase().indexOf(searchString) > -1 ||
         txtValue2.toUpperCase().indexOf(searchString) > -1 ||
-        txtValue3.toUpperCase().indexOf(searchString) > -1 ||
-        txtValue4.toUpperCase().indexOf(searchString) > -1 
+        txtValue3.toUpperCase().indexOf(searchString) > -1 
       ) {
+        tr[i].style.display = "";
+      } else {
+        tr[i].style.display = "none";
+      }
+    }
+  }
+}
+
+function filterTriggers() {
+  let input, table, tr, td, txtValue1;
+  input = document.getElementById("Object");
+  searchString = input.value.toUpperCase();
+  table = document.getElementById("triggersTable");
+  tr = table.getElementsByTagName("tr");
+
+  // Loop through all table rows, and hide those who don't match the search query
+  for (let i = 0; i < tr.length; i++) {
+    console.log("Started");
+    td = tr[i].getElementsByTagName("td")[1];
+    if (td) {
+      txtValue1 = td.textContent || td.innerText;
+      if (searchString == "" || txtValue1.toUpperCase() === searchString) {
         tr[i].style.display = "";
       } else {
         tr[i].style.display = "none";
