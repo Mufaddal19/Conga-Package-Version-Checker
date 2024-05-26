@@ -322,7 +322,7 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   if(searchTriggerInput) {
-    searchTriggerInput.addEventListener("keyup", () => searchTriggers(false));
+    searchTriggerInput.addEventListener("keyup", searchTriggers);
   }
 
   if(triggerFilterObject) {
