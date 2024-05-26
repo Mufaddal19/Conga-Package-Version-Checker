@@ -210,9 +210,8 @@ function fetchTriggersOnAgreementObjectFromOrg() {
       'Apttus__DocumentVersionDetail__c',
       'Apttus__APTS_Template__c',
       'Apttus__CycleTimeGroupData__c'
-    )`,
-    // )
-    // AND NamespacePrefix = null`,
+    )
+    AND NamespacePrefix = null`,
     function (err, result) {
       if (err) console.log("error in Ayush Edit: " + err);
       // console.log("Success in Ayush Edit: " + result);
