@@ -2,7 +2,7 @@
     <head>
         <script src="jsforce.js" type="text/javascript"></script>
         <link rel="stylesheet" type="text/css" href="style.css">
-        <h1 align="center" style=" color: rgb(12, 75, 104); font-size:xx-large">Conga Package Version Inspector </h1></center>
+        <h1 align="center" style=" color: rgb(12, 75, 104); font-size:xx-large">Conga Debug Helper</h1></center>
 
     </head>
 
@@ -17,13 +17,18 @@
         <center>
             <!-- When user is inside SFDC Logged IN page -->
             <div id="actions" style="margin-bottom: 20px;">
+                <p id="OrgId" style="visibility: hidden;"> <b>Org ID</b> : <span id="OrgIdValue"></span> </p>
                 <button id="btn" style="visibility: hidden;">
                     View Packages
                 </button>
                 <button id="ViewTriggersBtn" style="visibility: hidden;">
                     View Triggers
                 </button>
+                <button id="ViewCallbacksBtn" style="visibility: hidden;">
+                    View Callbacks
+                </button>
             </div>
+            
             
             <div id="Container">
                 <div id="packagesContainer" style="display: none;">
@@ -38,12 +43,22 @@
                                 <label for="Object">Object:</label>
                                 <select name="Object" id="Object">
                                     <option value="" selected></option>
-                                    <option value="Agreement">Agreement</option>
+                                    <option value="Account">Account</option>
+                                    <option value="Opportunity">Opportunity</option>
+                                    <option value="Proposal">Proposal</option>
+                                    <option value="Product Configuration">Product Configuration</option>
+                                    <option value="Line Item">Line Item</option>
+                                    <option value="Summary Group">Summary Group</option>
+                                    <option value="Proposal Line Item">Proposal Line Item</option>
+                                    <option value="Order">Order</option>
+                                    <option value="Order Line Item">Order Line Item</option>
                                     <option value="Agreement Line Item">Agreement Line Item</option>
+                                    <option value="Agreement">Agreement</option>
                                     <option value="Document Version">Document Version</option>
                                     <option value="Document Version Detail">Document Version Detail</option>
                                     <option value="Template">Template</option>
                                     <option value="Cycle Time Group Data">Cycle Time Group Data</option>
+                                    <option value="Approval Request">Approval Request</option>
                                 </select>
                             </span>
                             <span class="triggerFilterSearch">
@@ -54,6 +69,16 @@
                     </div>
                     <table id="triggersTable"></table>
                 </div>
+            </div>
+
+            <div id="CallbacksContainer" style="display: none;">
+                <div>
+                    <table id="CallbackTable"></table>
+                </div>
+            </div>
+
+            <div id="Credits" style="visibility: hidden;">
+                <p>Contributors : <a href="https://www.linkedin.com/in/mufaddal19/">Mufaddal Laxmidhar</a> and <a href="https://www.linkedin.com/in/asucl/">Ayush Saxena</a> </p>
             </div>
         </center>
 

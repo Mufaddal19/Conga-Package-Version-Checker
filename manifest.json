@@ -1,9 +1,9 @@
 {
 "update_url": "https://clients2.google.com/service/update2/crx",
 
-    "name": "Conga Package Version Inspector",
-    "description": "Check Conga Package Versions in One Click",
-    "version": "0.0.1.1",
+    "name": "Conga Debug Helper",
+    "description": "View Imp Information for Debugging Conga Issues",
+    "version": "0.0.1.3",
     "manifest_version": 3,
     "author":{
       "name":"Mufaddal Laxmidhar",
