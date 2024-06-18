@@ -304,15 +304,15 @@ function renderTriggersTable(data) {
           cell.innerHTML = objects[obj[key]];
         } else if (key == 'Status') {
           cell.id = 'T' + obj['Id'];
-          cell.innerHTML = `<label class="switch">
-            <input type="checkbox" ${obj[key] === 'Active' ? 'checked' : ''}>
-            <span class="slider round"></span>
-          </label>
-          <div class="loader" title="Changing trigger status...">
-            <div class="loadersmall"></div>
-          </div>
-          `;
-          cell.className = 'status-cell'
+          cell.innerHTML = `<div class="status-cell">
+            <label class="switch">
+              <input type="checkbox" ${obj[key] === 'Active' ? 'checked' : ''}>
+              <span class="slider round"></span>
+            </label>
+            <div class="loader" title="Changing trigger status...">
+              <div class="loadersmall"></div>
+            </div>
+          </div>`;
           let checkbox = cell.querySelector('input[type="checkbox"]');
           checkbox.addEventListener('click', function() {
               handleCheckboxClick(obj['Id'], obj['Name'], checkbox.checked);
@@ -325,8 +325,6 @@ function renderTriggersTable(data) {
 }
 async function handleCheckboxClick(id, triggerName, isActive) {
   try {
-    console.log(document.querySelector(`#T${id} .loader`));
-    console.log(document.querySelector(`#T${id} input[type="checkbox"]`));
     document.querySelector(`#T${id} .loader`).setAttribute('title', `Changing trigger status to ${isActive ? 'Active' : 'Inactive'}`)
     document.querySelector(`#T${id} .loader`).style.visibility = 'visible';
   
