@@ -61,6 +61,7 @@ function getcookie() {
 
         let viewTriggersButton = document.getElementById("ViewTriggersBtn");
         viewTriggersButton.setAttribute("style", "visibility: visible");
+        viewTriggersButton.addEventListener("click", ToggleTriggerContainer);
 
         let viewCallbacksButton = document.getElementById("ViewCallbacksBtn");
         viewCallbacksButton.setAttribute("style", "visibility: visible");
@@ -70,6 +71,8 @@ function getcookie() {
 
         let creditText = document.getElementById("Credits");
         creditText.setAttribute("style", "visibility: visible");
+
+        document.getElementById("ViewCallbacksBtn").addEventListener("click", ToggleCallbackContainer);
 
         fetchOrgId();
         fetchPackageFromOrg();
@@ -298,12 +301,99 @@ function renderTriggersTable(data) {
           triggerLinkElement.text = obj[key];
           cell.appendChild(triggerLinkElement);
         }  else if (key == 'TableEnumOrId') {
-            cell.innerHTML = objects[obj[key]];
+          cell.innerHTML = objects[obj[key]];
+        } else if (key == 'Status') {
+          cell.id = 'T' + obj['Id'];
+          cell.innerHTML = `<label class="switch">
+            <input type="checkbox" ${obj[key] === 'Active' ? 'checked' : ''}>
+            <span class="slider round"></span>
+          </label>
+          <div class="loader" title="Changing trigger status...">
+            <div class="loadersmall"></div>
+          </div>
+          `;
+          cell.className = 'status-cell'
+          let checkbox = cell.querySelector('input[type="checkbox"]');
+          checkbox.addEventListener('click', function() {
+              handleCheckboxClick(obj['Id'], obj['Name'], checkbox.checked);
+          });
         } else {
             cell.innerHTML = obj[key];
           }
       });
   });
+}
+async function handleCheckboxClick(id, triggerName, isActive) {
+  try {
+    console.log(document.querySelector(`#T${id} .loader`));
+    console.log(document.querySelector(`#T${id} input[type="checkbox"]`));
+    document.querySelector(`#T${id} .loader`).setAttribute('title', `Changing trigger status to ${isActive ? 'Active' : 'Inactive'}`)
+    document.querySelector(`#T${id} .loader`).style.visibility = 'visible';
+  
+    const toolingUrl = `${instanceUrl}/services/data/v50.0/tooling/sobjects/`;
+
+    // #region 1) Create MetadataContainer
+    let payload = {
+        Name: `${triggerName.length > 17 ? triggerName.slice(0, 17) : triggerName}${new Date().toISOString().slice(10)}`,
+    };
+
+    const metadataContainer = await conn.requestPost(toolingUrl + 'MetadataContainer' + '/', payload);
+
+    // #endregion
+    console.log('MD Container:', metadataContainer);
+    
+
+    //#region 2) Create ApexTriggerMember object, returns apextriggermember object id
+    const triggerData = await conn.tooling.sobject('ApexTrigger').find( { Name: triggerName});
+    triggerData[0].Metadata.status = isActive ? 'Active' : 'Inactive';
+    payload = {
+      MetadataContainerId: metadataContainer.id,
+      ContentEntityId: id,
+      Body: triggerData[0].Body,
+      Metadata: triggerData[0].Metadata
+    };
+    const aTMObject = await conn.requestPost(toolingUrl + 'ApexTriggerMember/', payload);
+    //#endregion
+    console.log('ATM object: ', aTMObject);
+
+
+    // #region 3) Create Container Async Request
+    payload = {
+      MetadataContainerId: metadataContainer.id,
+      isCheckOnly: false
+    };
+    const containerAsyncRequest = await conn.requestPost(toolingUrl + 'ContainerAsyncRequest/', payload);
+    //#endregion
+    console.log('Container Async Request', containerAsyncRequest);
+    
+    // #region 4) Container Async Request status
+    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+    let state = 'Queued';
+    let res = '';
+    
+    while (state === 'Queued') {
+        res = await conn.tooling.sobject('ContainerAsyncRequest').find({ id: containerAsyncRequest.id});
+        state = res[0].State;
+        console.log(`Current state: ${state}`);
+
+        if (state === 'Queued') {
+            await delay(1000);
+        }
+    }
+    
+    if (state === 'Completed') {
+      document.querySelector(`#T${id} .loader`).style.visibility = 'hidden';
+      console.log('Trigger updated successfully.');
+    } else {
+      document.querySelector(`#T${id} input[type="checkbox"]`).checked = false;
+      console.error(`Trigger status failed with state: ${state} and response: `, res);
+    }
+    //#endregion
+
+  } catch (error) {
+    console.log(error);
+  }
+  
 }
 
 function fetchCallbackClasses() {
@@ -460,9 +550,6 @@ function sendTableToBackground() {
     */
   });
 
-  //View Triggers
-  document.getElementById("ViewTriggersBtn").addEventListener("click", ToggleTriggerContainer);
-  document.getElementById("ViewCallbacksBtn").addEventListener("click", ToggleCallbackContainer);
 }
 
 function ToggleTriggerContainer() {
