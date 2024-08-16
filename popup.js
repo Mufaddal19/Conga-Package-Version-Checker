@@ -250,7 +250,8 @@ function fetchTriggersOnObjectFromOrg() {
       'Apttus__DocumentVersionDetail__c',
       'Apttus__APTS_Template__c',
       'Apttus__CycleTimeGroupData__c',
-      'Apttus_Approval__Approval_Request__c'
+      'Apttus_Approval__Approval_Request__c',
+      'Apttus_Config2__AssetLineItem__c'
     )
     AND NamespacePrefix = null`,
     function (err, result) {
@@ -280,7 +281,8 @@ function renderTriggersTable(data) {
     Apttus__DocumentVersionDetail__c: "Document Version Detail",
     Apttus__APTS_Template__c: "Template",
     Apttus__CycleTimeGroupData__c: "Cycle Time Group Data",
-    Apttus_Approval__Approval_Request__c: "Approval Request"
+    Apttus_Approval__Approval_Request__c: "Approval Request",
+    Apttus_Config2__AssetLineItem__c: "Asset Line Item"
   };
   const keys = ['Name', 'TableEnumOrId', 'ApiVersion', 'Status']; // Selected keys
   let table = document.getElementById('triggersTable');
