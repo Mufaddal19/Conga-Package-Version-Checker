@@ -61,6 +61,7 @@ function getcookie() {
 
         let viewTriggersButton = document.getElementById("ViewTriggersBtn");
         viewTriggersButton.setAttribute("style", "visibility: visible");
+        viewTriggersButton.addEventListener("click", ToggleTriggerContainer);
 
         let viewCallbacksButton = document.getElementById("ViewCallbacksBtn");
         viewCallbacksButton.setAttribute("style", "visibility: visible");
@@ -70,6 +71,8 @@ function getcookie() {
 
         let creditText = document.getElementById("Credits");
         creditText.setAttribute("style", "visibility: visible");
+
+        document.getElementById("ViewCallbacksBtn").addEventListener("click", ToggleCallbackContainer);
 
         fetchOrgId();
         fetchPackageFromOrg();
@@ -247,7 +250,8 @@ function fetchTriggersOnObjectFromOrg() {
       'Apttus__DocumentVersionDetail__c',
       'Apttus__APTS_Template__c',
       'Apttus__CycleTimeGroupData__c',
-      'Apttus_Approval__Approval_Request__c'
+      'Apttus_Approval__Approval_Request__c',
+      'Apttus_Config2__AssetLineItem__c'
     )
     AND NamespacePrefix = null`,
     function (err, result) {
@@ -277,7 +281,8 @@ function renderTriggersTable(data) {
     Apttus__DocumentVersionDetail__c: "Document Version Detail",
     Apttus__APTS_Template__c: "Template",
     Apttus__CycleTimeGroupData__c: "Cycle Time Group Data",
-    Apttus_Approval__Approval_Request__c: "Approval Request"
+    Apttus_Approval__Approval_Request__c: "Approval Request",
+    Apttus_Config2__AssetLineItem__c: "Asset Line Item"
   };
   const keys = ['Name', 'TableEnumOrId', 'ApiVersion', 'Status']; // Selected keys
   let table = document.getElementById('triggersTable');
@@ -298,12 +303,97 @@ function renderTriggersTable(data) {
           triggerLinkElement.text = obj[key];
           cell.appendChild(triggerLinkElement);
         }  else if (key == 'TableEnumOrId') {
-            cell.innerHTML = objects[obj[key]];
+          cell.innerHTML = objects[obj[key]];
+        } else if (key == 'Status') {
+          cell.id = 'T' + obj['Id'];
+          cell.innerHTML = `<div class="status-cell">
+            <label class="switch">
+              <input type="checkbox" ${obj[key] === 'Active' ? 'checked' : ''}>
+              <span class="slider round"></span>
+            </label>
+            <div class="loader" title="Changing trigger status...">
+              <div class="loadersmall"></div>
+            </div>
+          </div>`;
+          let checkbox = cell.querySelector('input[type="checkbox"]');
+          checkbox.addEventListener('click', function() {
+              handleCheckboxClick(obj['Id'], obj['Name'], checkbox.checked);
+          });
         } else {
             cell.innerHTML = obj[key];
           }
       });
   });
+}
+async function handleCheckboxClick(id, triggerName, isActive) {
+  try {
+    document.querySelector(`#T${id} .loader`).setAttribute('title', `Changing trigger status to ${isActive ? 'Active' : 'Inactive'}`)
+    document.querySelector(`#T${id} .loader`).style.visibility = 'visible';
+  
+    const toolingUrl = `${instanceUrl}/services/data/v50.0/tooling/sobjects/`;
+
+    // #region 1) Create MetadataContainer
+    let payload = {
+        Name: `${triggerName.length > 17 ? triggerName.slice(0, 17) : triggerName}${new Date().toISOString().slice(10)}`,
+    };
+
+    const metadataContainer = await conn.requestPost(toolingUrl + 'MetadataContainer' + '/', payload);
+
+    // #endregion
+    console.log('MD Container:', metadataContainer);
+    
+
+    //#region 2) Create ApexTriggerMember object, returns apextriggermember object id
+    const triggerData = await conn.tooling.sobject('ApexTrigger').find( { Name: triggerName});
+    triggerData[0].Metadata.status = isActive ? 'Active' : 'Inactive';
+    payload = {
+      MetadataContainerId: metadataContainer.id,
+      ContentEntityId: id,
+      Body: triggerData[0].Body,
+      Metadata: triggerData[0].Metadata
+    };
+    const aTMObject = await conn.requestPost(toolingUrl + 'ApexTriggerMember/', payload);
+    //#endregion
+    console.log('ATM object: ', aTMObject);
+
+
+    // #region 3) Create Container Async Request
+    payload = {
+      MetadataContainerId: metadataContainer.id,
+      isCheckOnly: false
+    };
+    const containerAsyncRequest = await conn.requestPost(toolingUrl + 'ContainerAsyncRequest/', payload);
+    //#endregion
+    console.log('Container Async Request', containerAsyncRequest);
+    
+    // #region 4) Container Async Request status
+    const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+    let state = 'Queued';
+    let res = '';
+    
+    while (state === 'Queued') {
+        res = await conn.tooling.sobject('ContainerAsyncRequest').find({ id: containerAsyncRequest.id});
+        state = res[0].State;
+        console.log(`Current state: ${state}`);
+
+        if (state === 'Queued') {
+            await delay(1000);
+        }
+    }
+    
+    if (state === 'Completed') {
+      document.querySelector(`#T${id} .loader`).style.visibility = 'hidden';
+      console.log('Trigger updated successfully.');
+    } else {
+      document.querySelector(`#T${id} input[type="checkbox"]`).checked = false;
+      console.error(`Trigger status failed with state: ${state} and response: `, res);
+    }
+    //#endregion
+
+  } catch (error) {
+    console.log(error);
+  }
+  
 }
 
 function fetchCallbackClasses() {
@@ -460,9 +550,6 @@ function sendTableToBackground() {
     */
   });
 
-  //View Triggers
-  document.getElementById("ViewTriggersBtn").addEventListener("click", ToggleTriggerContainer);
-  document.getElementById("ViewCallbacksBtn").addEventListener("click", ToggleCallbackContainer);
 }
 
 function ToggleTriggerContainer() {
@@ -504,11 +591,11 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 
   if(searchTriggerInput) {
-    searchTriggerInput.addEventListener("keyup", () => searchTriggers(false));
+    searchTriggerInput.addEventListener("keyup", searchTriggers);
   }
 
   if(triggerFilterObject) {
-    triggerFilterObject.addEventListener("input", () => searchTriggers(true));
+    triggerFilterObject.addEventListener("input", filterTriggers);
   }
 
   function myFunction() {
@@ -541,9 +628,9 @@ document.addEventListener("DOMContentLoaded", function () {
   }
 });
 
-function searchTriggers(calledFromFilterObject) {
-  let input, table, tr, td, td1, td2, td3, i, txtValue1, txtValue2, txtValue3, txtValue4;
-  calledFromFilterObject ? input = document.getElementById("Object") : input = document.getElementById("searchTrigger");
+function searchTriggers() {
+  let input, table, tr, td, td2, td3, i, txtValue1, txtValue2, txtValue3;
+  input = document.getElementById("searchTrigger");
   searchString = input.value.toUpperCase();
   table = document.getElementById("triggersTable");
   tr = table.getElementsByTagName("tr");
@@ -551,20 +638,17 @@ function searchTriggers(calledFromFilterObject) {
   // Loop through all table rows, and hide those who don't match the search query
   for (i = 0; i < tr.length; i++) {
     console.log("Started");
-    td = tr[i].getElementsByTagName("td")[0];
-    td1 = tr[i].getElementsByTagName("td")[1];
-    td2 = tr[i].getElementsByTagName("td")[2];
-    td3 = tr[i].getElementsByTagName("td")[3];
-    if (td || td1 || td2 || td3) {
+    td = tr[i].getElementsByTagName("td")[0]; // Trigger Name 
+    td2 = tr[i].getElementsByTagName("td")[2]; // Trigger API Version
+    td3 = tr[i].getElementsByTagName("td")[3]; // Trigger Status
+    if (td || td2 || td3) {
       txtValue1 = td.textContent || td.innerText;
-      txtValue2 = td1.textContent || td1.innerText;
-      txtValue3 = td2.textContent || td2.innerText;
-      txtValue4 = td3.textContent || td3.innerText;
+      txtValue2 = td2.textContent || td2.innerText;
+      txtValue3 = td3.textContent || td3.innerText;
       if (
         txtValue1.toUpperCase().indexOf(searchString) > -1 ||
         txtValue2.toUpperCase().indexOf(searchString) > -1 ||
-        txtValue3.toUpperCase().indexOf(searchString) > -1 ||
-        txtValue4.toUpperCase().indexOf(searchString) > -1 
+        txtValue3.toUpperCase().indexOf(searchString) > -1 
       ) {
         tr[i].style.display = "";
       } else {
@@ -573,6 +657,29 @@ function searchTriggers(calledFromFilterObject) {
     }
   }
 }
+
+function filterTriggers() {
+  let input, table, tr, td, txtValue1;
+  input = document.getElementById("Object");
+  searchString = input.value.toUpperCase();
+  table = document.getElementById("triggersTable");
+  tr = table.getElementsByTagName("tr");
+
+  // Loop through all table rows, and hide those who don't match the search query
+  for (let i = 0; i < tr.length; i++) {
+    console.log("Started");
+    td = tr[i].getElementsByTagName("td")[1];
+    if (td) {
+      txtValue1 = td.textContent || td.innerText;
+      if (searchString == "" || txtValue1.toUpperCase() === searchString) {
+        tr[i].style.display = "";
+      } else {
+        tr[i].style.display = "none";
+      }
+    }
+  }
+}
+
 
 /*
 document.addEventListener("DOMContentLoaded", function () {
