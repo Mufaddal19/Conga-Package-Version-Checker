@@ -10,7 +10,9 @@
       "url":"https://mufaddal19.github.io"
     },
     "background": {
-        "service_worker": "background.js"
+        "service_worker": "background.js",
+        "scripts": "constants.js",
+        "type": "module"
     },
     "permissions": ["activeTab", "tabs", "cookies"],
     "host_permissions": ["https://*.salesforce.com/*","https://*.force.com/*"],

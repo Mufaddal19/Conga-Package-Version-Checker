@@ -1,18 +1,23 @@
+import { CaseDetails, Container, TriggersTableColumnObjects, SubscriberOrgOpenLink } from "./constants.js";
+
 var conn = null;
 var sessionId = null;
 var instanceUrl = null;
 let text =
   "<table> <tr> <th>Package Name</th> <th>NameSpace Prefix</th>   <th>Version Number</th> </tr>";
+var activeContainer = null;
+var caseId = null;
+let caseDetails = null;
 
 try {
   console.log("Inside Popup JS");
   getcookie();
-} catch (error) {}
+} catch (error) { }
 
 let excluderegex =
   /(login|help|developer|success|appexchange|partners|test).salesforce.com/;
 function getcookie() {
-  if(window.location.pathname == '/popup.html' && window.location.search.includes('host')) {
+  if (window.location.pathname == '/popup.html' && window.location.search.includes('host')) {
     let host = new URLSearchParams(window.location.search).get('host');
     instanceUrl = host;
   }
@@ -27,8 +32,8 @@ function getcookie() {
     if (
       tab.url &&
       (tab.url.includes(".lightning.force.com") ||
-        tab.url.includes(".salesforce.com")) || 
-        instanceUrl
+        tab.url.includes(".salesforce.com")) ||
+      instanceUrl
     ) {
       if (!instanceUrl) {
         let url = tab.url.replace("https://", "").split("/")[0];
@@ -55,32 +60,16 @@ function getcookie() {
         if (div) {
           div.parentNode.removeChild(div);
         }
-        // Unhide the View Packages Button on Popup HTML
-        let btn = document.getElementById("btn");
-        btn.setAttribute("style", "visibility: visible");
 
-        let viewTriggersButton = document.getElementById("ViewTriggersBtn");
-        viewTriggersButton.setAttribute("style", "visibility: visible");
-        viewTriggersButton.addEventListener("click", ToggleTriggerContainer);
-
-        let viewCallbacksButton = document.getElementById("ViewCallbacksBtn");
-        viewCallbacksButton.setAttribute("style", "visibility: visible");
-
-        let OrgIdText = document.getElementById("OrgId");
-        OrgIdText.setAttribute("style", "visibility: visible");
-
-        let creditText = document.getElementById("Credits");
-        creditText.setAttribute("style", "visibility: visible");
-
-        document.getElementById("ViewCallbacksBtn").addEventListener("click", ToggleCallbackContainer);
-
+        RenderUI();
         fetchOrgId();
         fetchPackageFromOrg();
         fetchTriggersOnObjectFromOrg();
         fetchCallbackClasses();
-    })
+        fetchCaseDetails();
+      })
     }
-});
+  });
 }
 /*
       if(tab.url.includes(".sandbox.")){
@@ -141,7 +130,32 @@ function getcookie() {
     });
   }
 */
-function fetchOrgId(){
+
+function RenderUI() {
+  let SubscriberOrgBtn = document.getElementById("SubscriberOrgBtn");
+  SubscriberOrgBtn.style.visibility = "visible";
+  SubscriberOrgBtn.addEventListener("click", () => ToggleActiveContainer(Container.SubscriberOrg));
+
+  let PackagesBtn = document.getElementById("PackagesBtn");
+  PackagesBtn.style.visibility = "visible";
+  PackagesBtn.addEventListener("click", () => ToggleActiveContainer(Container.Packages));
+
+  let TriggersButton = document.getElementById("TriggersBtn");
+  TriggersButton.style.visibility = "visible";
+  TriggersButton.addEventListener("click", ToggleTriggerContainer);
+
+  let CallbacksButton = document.getElementById("CallbacksBtn");
+  CallbacksButton.style.visibility = "visible";
+  CallbacksButton.addEventListener("click", () => ToggleActiveContainer(Container.Callbacks));
+
+  let OrgIdText = document.getElementById("OrgId");
+  OrgIdText.style.visibility = "visible";
+
+  let creditText = document.getElementById("Credits");
+  creditText.style.visibility = "visible";
+}
+
+function fetchOrgId() {
   console.log("Inside Fetch Org ID Funtion");
   conn.query(
     "select Id, PrimaryContact,TrialExpirationDate, OrganizationType, InstanceName, IsSandbox from Organization",
@@ -151,10 +165,9 @@ function fetchOrgId(){
       }
       console.log(result);
       console.log("Got Org Details");
-      let orgId = result.records[0].Id.slice(0,15);
-      var orgValue = document.getElementById("OrgIdValue");
-      orgValue.innerHTML = orgId;
-})
+      let orgId = result.records[0].Id.slice(0, 15);
+      document.getElementById("OrgIdValue").innerText = orgId;
+    })
 }
 
 
@@ -168,29 +181,27 @@ function fetchPackageFromOrg() {
       }
       console.log(result);
       for (var i = 0; i < result.records.length; i++) {
+        let subscriberPackage = result.records[i].SubscriberPackage;
+        let record = result.records[i];
         var PackageRow =
-          result.records[i].SubscriberPackage.Name +
-          "\t" +
-          result.records[i].SubscriberPackage.NamespacePrefix +
-          "\t" +
-          result.records[i].SubscriberPackageVersion.Name;
+          subscriberPackage.Name + "\t" +
+          subscriberPackage.NamespacePrefix + "\t" +
+          record.SubscriberPackageVersion.Name;
         console.log(PackageRow);
 
-        if (result.records[i].SubscriberPackageVersion.PatchVersion != "0") {
+        let packageVersion = result.records[i].SubscriberPackageVersion;
+        if (packageVersion.PatchVersion != "0") {
           var versionnumber =
-            result.records[i].SubscriberPackageVersion.MajorVersion +
-            "." +
-            result.records[i].SubscriberPackageVersion.MinorVersion +
-            "." +
-            result.records[i].SubscriberPackageVersion.PatchVersion;
+            packageVersion.MajorVersion + "." +
+            packageVersion.MinorVersion + "." +
+            packageVersion.PatchVersion;
         } else {
           var versionnumber =
-            result.records[i].SubscriberPackageVersion.MajorVersion +
-            "." +
-            result.records[i].SubscriberPackageVersion.MinorVersion;
+            packageVersion.MajorVersion + "." +
+            packageVersion.MinorVersion;
         }
 
-        let check = result.records[i].SubscriberPackage.NamespacePrefix;
+        let check = subscriberPackage.NamespacePrefix;
         if (check != null) {
           // var check1 = check.includes('Apttus');
           // var check2 = check.includes("Conga");
@@ -208,9 +219,9 @@ function fetchPackageFromOrg() {
             //console.log(toolingAPIResponse.records[i].SubscriberPackage.Name);
             text +=
               "<tr><td>" +
-              result.records[i].SubscriberPackage.Name +
+              subscriberPackage.Name +
               "</td><td>" +
-              result.records[i].SubscriberPackage.NamespacePrefix +
+              subscriberPackage.NamespacePrefix +
               "</td><td>" +
               versionnumber +
               "</td></tr>";
@@ -219,14 +230,14 @@ function fetchPackageFromOrg() {
       }
       text += "</table>";
       console.log(text);
-      sendTableToBackground();
+      // sendTableToBackground();
       var tableContainer = document.getElementById("message1");
       console.log(tableContainer);
       if (tableContainer) {
         tableContainer.innerHTML = text;
       }
     }
-  );  
+  );
 }
 
 function fetchTriggersOnObjectFromOrg() {
@@ -250,8 +261,7 @@ function fetchTriggersOnObjectFromOrg() {
       'Apttus__DocumentVersionDetail__c',
       'Apttus__APTS_Template__c',
       'Apttus__CycleTimeGroupData__c',
-      'Apttus_Approval__Approval_Request__c',
-      'Apttus_Config2__AssetLineItem__c'
+      'Apttus_Approval__Approval_Request__c'
     )
     AND NamespacePrefix = null`,
     function (err, result) {
@@ -265,25 +275,6 @@ function fetchTriggersOnObjectFromOrg() {
 
 function renderTriggersTable(data) {
   console.log('Inside Render Triggers Table function');
-  const objects = {
-    Account: "Account",
-    Opportunity: "Opportunity",
-    Apttus_Proposal__Proposal__c: "Proposal",
-    Apttus_Config2__ProductConfiguration__c: "Product Configuration",
-    Apttus_Config2__LineItem__c: "Line Item",
-    Apttus_Proposal__Proposal_Line_Item__c: "Proposal Line Item",
-    Apttus_Config2__Order__c: "Order",
-    Apttus_Config2__OrderLineItem__c: "Order Line Item",
-    Apttus_Config2__SummaryGroup__c: "Summary Group",
-    Apttus__APTS_Agreement__c: "Agreement",
-    Apttus__AgreementLineItem__c: "Agreement Line Item",
-    Apttus__DocumentVersion__c: "Document Version",
-    Apttus__DocumentVersionDetail__c: "Document Version Detail",
-    Apttus__APTS_Template__c: "Template",
-    Apttus__CycleTimeGroupData__c: "Cycle Time Group Data",
-    Apttus_Approval__Approval_Request__c: "Approval Request",
-    Apttus_Config2__AssetLineItem__c: "Asset Line Item"
-  };
   const keys = ['Name', 'TableEnumOrId', 'ApiVersion', 'Status']; // Selected keys
   let table = document.getElementById('triggersTable');
   let header = table.createTHead().insertRow();
@@ -292,21 +283,21 @@ function renderTriggersTable(data) {
   header.insertCell().outerHTML = '<th>API Version</th>';
   header.insertCell().outerHTML = '<th>Status</th>';
   let body = table.createTBody();
-  data.forEach(function(obj) {
-      let row = body.insertRow();
-      keys.forEach(function(key) {
-        let cell = row.insertCell();
-        if(key == 'Name') {
-          let triggerLinkElement = document.createElement('a');
-          triggerLinkElement.href = instanceUrl + '/lightning/setup/ApexTriggers/page?address=%2F' + obj['Id'];
-          triggerLinkElement.target = 'blank';
-          triggerLinkElement.text = obj[key];
-          cell.appendChild(triggerLinkElement);
-        }  else if (key == 'TableEnumOrId') {
-          cell.innerHTML = objects[obj[key]];
-        } else if (key == 'Status') {
-          cell.id = 'T' + obj['Id'];
-          cell.innerHTML = `<div class="status-cell">
+  data.forEach(function (obj) {
+    let row = body.insertRow();
+    keys.forEach(function (key) {
+      let cell = row.insertCell();
+      if (key == 'Name') {
+        let triggerLinkElement = document.createElement('a');
+        triggerLinkElement.href = instanceUrl + '/lightning/setup/ApexTriggers/page?address=%2F' + obj['Id'];
+        triggerLinkElement.target = 'blank';
+        triggerLinkElement.text = obj[key];
+        cell.appendChild(triggerLinkElement);
+      } else if (key == 'TableEnumOrId') {
+        cell.innerHTML = TriggersTableColumnObjects[obj[key]];
+      } else if (key == 'Status') {
+        cell.id = 'T' + obj['Id'];
+        cell.innerHTML = `<div class="status-cell">
             <label class="switch">
               <input type="checkbox" ${obj[key] === 'Active' ? 'checked' : ''}>
               <span class="slider round"></span>
@@ -315,36 +306,36 @@ function renderTriggersTable(data) {
               <div class="loadersmall"></div>
             </div>
           </div>`;
-          let checkbox = cell.querySelector('input[type="checkbox"]');
-          checkbox.addEventListener('click', function() {
-              handleCheckboxClick(obj['Id'], obj['Name'], checkbox.checked);
-          });
-        } else {
-            cell.innerHTML = obj[key];
-          }
-      });
+        let checkbox = cell.querySelector('input[type="checkbox"]');
+        checkbox.addEventListener('click', function () {
+          handleCheckboxClick(obj['Id'], obj['Name'], checkbox.checked);
+        });
+      } else {
+        cell.innerHTML = obj[key];
+      }
+    });
   });
 }
 async function handleCheckboxClick(id, triggerName, isActive) {
   try {
     document.querySelector(`#T${id} .loader`).setAttribute('title', `Changing trigger status to ${isActive ? 'Active' : 'Inactive'}`)
     document.querySelector(`#T${id} .loader`).style.visibility = 'visible';
-  
+
     const toolingUrl = `${instanceUrl}/services/data/v50.0/tooling/sobjects/`;
 
     // #region 1) Create MetadataContainer
     let payload = {
-        Name: `${triggerName.length > 17 ? triggerName.slice(0, 17) : triggerName}${new Date().toISOString().slice(10)}`,
+      Name: `${triggerName.length > 17 ? triggerName.slice(0, 17) : triggerName}${new Date().toISOString().slice(10)}`,
     };
 
     const metadataContainer = await conn.requestPost(toolingUrl + 'MetadataContainer' + '/', payload);
 
     // #endregion
     console.log('MD Container:', metadataContainer);
-    
+
 
     //#region 2) Create ApexTriggerMember object, returns apextriggermember object id
-    const triggerData = await conn.tooling.sobject('ApexTrigger').find( { Name: triggerName});
+    const triggerData = await conn.tooling.sobject('ApexTrigger').find({ Name: triggerName });
     triggerData[0].Metadata.status = isActive ? 'Active' : 'Inactive';
     payload = {
       MetadataContainerId: metadataContainer.id,
@@ -365,22 +356,22 @@ async function handleCheckboxClick(id, triggerName, isActive) {
     const containerAsyncRequest = await conn.requestPost(toolingUrl + 'ContainerAsyncRequest/', payload);
     //#endregion
     console.log('Container Async Request', containerAsyncRequest);
-    
+
     // #region 4) Container Async Request status
     const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
     let state = 'Queued';
     let res = '';
-    
-    while (state === 'Queued') {
-        res = await conn.tooling.sobject('ContainerAsyncRequest').find({ id: containerAsyncRequest.id});
-        state = res[0].State;
-        console.log(`Current state: ${state}`);
 
-        if (state === 'Queued') {
-            await delay(1000);
-        }
+    while (state === 'Queued') {
+      res = await conn.tooling.sobject('ContainerAsyncRequest').find({ id: containerAsyncRequest.id });
+      state = res[0].State;
+      console.log(`Current state: ${state}`);
+
+      if (state === 'Queued') {
+        await delay(1000);
+      }
     }
-    
+
     if (state === 'Completed') {
       document.querySelector(`#T${id} .loader`).style.visibility = 'hidden';
       console.log('Trigger updated successfully.');
@@ -393,7 +384,7 @@ async function handleCheckboxClick(id, triggerName, isActive) {
   } catch (error) {
     console.log(error);
   }
-  
+
 }
 
 function fetchCallbackClasses() {
@@ -448,30 +439,134 @@ function fetchCallbackClasses() {
           hasCallbacks = true;
         }
       }
-      
+
       // Remove the trailing comma (if any)
       queryApexClass = queryApexClass.slice(0, -1);
-      
+
       // Close the parentheses for the IN clause
       queryApexClass += ")";
       console.log(hasCallbacks);
       console.log(queryApexClass);
 
-      if(hasCallbacks) fetchCallbackClasses2(queryApexClass,validCallbackClasses);
-  });
-    // renderCallbackTable(result.records);
+      if (hasCallbacks) fetchCallbackClasses2(queryApexClass, validCallbackClasses);
+    });
+  // renderCallbackTable(result.records);
 }
 
-function fetchCallbackClasses2(query,validClasses){
+async function fetchCaseDetails() {
+  // Get Current tab URL
+  const [tab] = await chrome.tabs.query({ active: true, lastFocusedWindow: true });
+  // Example URL https://host/lightning/r/Case/500Ub00000CKVsfIAH/view
+  // console.log(tab.url);
+
+  // Extract Case Id from the URL
+  const caseIdPattern = /\/Case\/([a-zA-Z0-9]+)\/view/;
+  const match = tab.url.match(caseIdPattern);
+  if (tab.url.includes('apttus2') && match && match[1]) {
+    console.log('Case ID: ' + match[1]);
+    caseId = match[1];
+  } else {
+    // Hide View Subscriber Org button when host doesn't contain "apttus2" meaning not Apttus C2 case page
+    document.getElementById("SubscriberOrgBtn").style.display = "none";
+    return;
+  }
+
+  // Fetch Subscriber Org Id and other case details from case id
+  conn.query(
+    `SELECT Id, CaseNumber, Org_ID__c, Subject, ContactEmail, External_Contact_Email_1__c, External_Contact_Email_2__c, External_Contact_Email_3__c, External_Contact_Email_4__c, Product__c FROM Case WHERE Id ='${caseId}'`,
+    function (err, result) {
+      if (err) {
+        console.log('Error in Fetching Case Details.');
+        console.log(err);
+      } else {
+        console.log(result.records[0]);
+        caseDetails = new CaseDetails(result.records[0]);
+        // console.log('casedetails');
+        console.log(caseDetails);
+        // Show Create Meeting Button
+        document.getElementById('CreateMeetingBtn').onclick = CreateMeeting;
+        document.getElementById('CreateMeetingBtn').style.visibility = "visible";
+
+        document.getElementById('subscriberOrgId').value = caseDetails.OrgID;
+        // If length is not equal to 15, it means OrgID field has more/less data other than id
+        if(caseDetails.OrgID.length != 15)
+          return;     
+
+        // Fetch & Display Release Name for installed packages of the subscriber org
+        FetchSubscriberOrgInstalledPackages();        
+      }
+    }
+  );
+  document.getElementById("OpenSubscriberOrgButton").onclick = OpenSubscriberOrg;
+}
+
+function CreateMeeting() {
+  if(caseDetails) {
+    let { CaseNumber, Subject, ContactEmail, ExternalContactEmail1, ExternalContactEmail2, ExternalContactEmail3, ExternalContactEmail4 } = caseDetails;
+    let meetingSubject = [CaseNumber, Subject].join(" ");
+    let attendees = [ContactEmail, ExternalContactEmail1, ExternalContactEmail2, ExternalContactEmail3, ExternalContactEmail4].join(",");
+    const CreateMeetingDeepLink = `https://teams.microsoft.com/l/meeting/new?subject=${encodeURIComponent(meetingSubject)}&attendees=${encodeURIComponent(attendees)}`; 
+    window.open(CreateMeetingDeepLink);
+  }
+  else 
+    console.log('Error in Create Meeting as Case Details are empty.');
+}
+
+function OpenSubscriberOrg() {
+  let orgid = document.getElementById('subscriberOrgId').value;
+  if (orgid && orgid.length == 15) {
+    window.open(SubscriberOrgOpenLink + orgid);
+  } else {
+    console.log('Subscriber Org Id input is empty or incorrect');
+    return;
+  }
+}
+
+function FetchSubscriberOrgInstalledPackages() {
+  conn.query(
+    `SELECT Package_Name__c, sfLma__Version_Number__c, Release_Name__c FROM sfLma__License__c WHERE sfLma__Subscriber_Org_ID__c = '${caseDetails.OrgID}'`,
+    function (err, result) {
+      if (err) console.log('Error while Fetching Subscriber Org Installed Packages. ' + err);
+      else {
+        console.log('subs org details: ');
+        console.log(result);
+        // Render Subscriber Org Installed Packages Table
+        const keys = ['Package_Name__c', 'sfLma__Version_Number__c', 'Release_Name__c']; // Selected keys
+        let table = document.getElementById('subscriberOrgPackagesTable');
+        let header = table.createTHead().insertRow();
+        header.insertCell().outerHTML = '<th>Subscriber Installed Package Name</th>';
+        header.insertCell().outerHTML = '<th>Version Number</th>';
+        header.insertCell().outerHTML = '<th>Release Name</th>';
+        let body = table.createTBody();
+        result.records.forEach(function (packageDetails) {
+          let row = body.insertRow();
+          keys.forEach(function (key) {
+            let cell = row.insertCell();
+            cell.innerHTML = packageDetails[key];
+          })
+        });
+
+        // Update Search Subscriber Org Packages input with Case's Product value and search the packages
+        document.getElementById('searchSubscriberOrgPackage').value = caseDetails.Product;
+        searchSubscriberOrgPackages();
+
+        // Open Subscriber Org Container
+        ToggleActiveContainer(Container.SubscriberOrg);
+        document.getElementById('searchSubscriberOrgPackage').focus();
+      }
+    }
+  );
+}
+
+function fetchCallbackClasses2(query, validClasses) {
   conn.query(query,
     function (err, result1) {
       if (err) console.log("Class Function Errror " + err);
       // console.log("Success in Ayush Edit: " + result);
 
       renderCallbackTable(result1.records, validClasses);
-});
+    });
 }
-
 
 function renderCallbackTable(classData, validClasses) {
   console.log('Inside Render Callback Table function');
@@ -487,115 +582,111 @@ function renderCallbackTable(classData, validClasses) {
 
   const keys = ['Name', 'ApexClass']; // Selected keys
 
-  classData.forEach(function(obj) {
-      console.debug(obj);
-      let row = body.insertRow();
-      keys.forEach(function(key) {
+  classData.forEach(function (obj) {
+    console.debug(obj);
+    let row = body.insertRow();
+    keys.forEach(function (key) {
       let cell = row.insertCell();
-      if(key == 'Name') {
+      if (key == 'Name') {
         for (const key1 in validClasses) {
-          if(key1 == "Apttus_Config2__ValidationCallbackClass__c") console.log(validClasses[key1] + " The Obj " + obj.Name);
+          if (key1 == "Apttus_Config2__ValidationCallbackClass__c") console.log(validClasses[key1] + " The Obj " + obj.Name);
           if (validClasses[key1] === obj.Name) {
             cell.innerHTML = key1;
             console.log("Value of Key " + key1 + " Value of Class Name " + obj.Name);
-         }
+          }
         }
       }
-      else if(key == 'ApexClass'){
+      else if (key == 'ApexClass') {
         let classLinkElement = document.createElement('a');
         classLinkElement.href = instanceUrl + '/lightning/setup/ApexClasses/page?address=%2F' + obj.Id;
         classLinkElement.target = 'blank';
         classLinkElement.text = obj.Name;
         cell.appendChild(classLinkElement);
       }
-  });
-});
-}
-
-
-
-function sendTableToBackground() {
-  document.getElementById("btn").addEventListener("click", function () {
-    let packagesContainer = document.getElementById("packagesContainer");
-    if(packagesContainer.style.display !== "none") {
-      packagesContainer.style.display = "none";
-    } else {
-      packagesContainer.style.display = "block";
-    }
-    document.getElementById("triggersContainer").style.display = "none";
-    document.getElementById("CallbacksContainer").style.display = "none";
-    // let searchBar = document.getElementById("myInput");
-    // searchBar.setAttribute("style", "visibility: visible");
-
-    // var tableContainer = document.getElementById("message1");
-    // console.log(tableContainer);
-    // if (tableContainer) {
-    //   tableContainer.innerHTML = text;
-    // }
-
-    /*
-    window.open(
-      "packages.html", "_blank");
-    chrome.runtime.sendMessage({ tableData: text });
-
-    chrome.tabs.create({ url: chrome.runtime.getURL("package.html") });
-    
-    var port = chrome.runtime.connect({ name: "popupToGetPackages" });
-    var dataToSend = {
-        variable1: text,
-      };
-      console.log(dataToSend);
-      port.postMessage(dataToSend); 
     });
-    */
   });
-
 }
+
+// function sendTableToBackground() {
+//   document.getElementById("btn").addEventListener("click", function () {
+//     let packagesContainer = document.getElementById("packagesContainer");
+//     if(packagesContainer.style.display !== "none") {
+//       packagesContainer.style.display = "none";
+//     } else {
+//       packagesContainer.style.display = "block";
+//     }
+//     document.getElementById("triggersContainer").style.display = "none";
+//     document.getElementById("CallbacksContainer").style.display = "none";
+//     // let searchBar = document.getElementById("myInput");
+//     // searchBar.setAttribute("style", "visibility: visible");
+
+//     // var tableContainer = document.getElementById("message1");
+//     // console.log(tableContainer);
+//     // if (tableContainer) {
+//     //   tableContainer.innerHTML = text;
+//     // }
+
+//     /*
+//     window.open(
+//       "packages.html", "_blank");
+//     chrome.runtime.sendMessage({ tableData: text });
+
+//     chrome.tabs.create({ url: chrome.runtime.getURL("package.html") });
+
+//     var port = chrome.runtime.connect({ name: "popupToGetPackages" });
+//     var dataToSend = {
+//         variable1: text,
+//       };
+//       console.log(dataToSend);
+//       port.postMessage(dataToSend); 
+//     });
+//     */
+//   });
+
+// }
 
 function ToggleTriggerContainer() {
-  if(window.location.search == "") {
+  if (window.location.search == "") {
     let urlString = chrome.runtime.getURL('popup.html') + '?host=' + encodeURIComponent(instanceUrl);
-    chrome.tabs.create({url: urlString});
+    chrome.tabs.create({ url: urlString });
   }
   // console.log('inside toggle trigger table function');
-  let display = document.getElementById("triggersContainer");
-  if(display.style.display !== "none") {
-    display.style.display = "none";
-  } else {
-    display.style.display = "block";
-  }
-  document.getElementById("packagesContainer").style.display = "none";
-  document.getElementById("CallbacksContainer").style.display = "none";
+  ToggleActiveContainer(Container.Triggers);
 }
 
-function ToggleCallbackContainer() {
-  // console.log('inside toggle trigger table function');
-  let display = document.getElementById("CallbacksContainer");
-  if(display.style.display !== "none") {
-    display.style.display = "none";
+function ToggleActiveContainer(containerName) {
+  let container = document.getElementById(containerName);
+  if (activeContainer === containerName) {
+    container.style.display = container.style.display === "none" ? "block" : "none";
   } else {
-    display.style.display = "block";
+    if (activeContainer) {
+      document.getElementById(activeContainer).style.display = "none";
+    }
+    container.style.display = "block";
+    activeContainer = containerName;
   }
-  document.getElementById("packagesContainer").style.display = "none";
-  document.getElementById("triggersContainer").style.display = "none";
 }
-
 
 document.addEventListener("DOMContentLoaded", function () {
   var searchInput = document.getElementById("myInput");
   var searchTriggerInput = document.getElementById("searchTrigger");
   var triggerFilterObject = document.getElementById("Object");
+  var searchSubscriberOrgPackageInput = document.getElementById("searchSubscriberOrgPackage");
 
   if (searchInput) {
     searchInput.addEventListener("keyup", myFunction);
   }
 
-  if(searchTriggerInput) {
+  if (searchTriggerInput) {
     searchTriggerInput.addEventListener("keyup", searchTriggers);
   }
 
-  if(triggerFilterObject) {
+  if (triggerFilterObject) {
     triggerFilterObject.addEventListener("input", filterTriggers);
+  }
+
+  if (searchSubscriberOrgPackageInput) {
+    searchSubscriberOrgPackageInput.addEventListener("keyup", searchSubscriberOrgPackages);
   }
 
   function myFunction() {
@@ -637,7 +728,6 @@ function searchTriggers() {
 
   // Loop through all table rows, and hide those who don't match the search query
   for (i = 0; i < tr.length; i++) {
-    console.log("Started");
     td = tr[i].getElementsByTagName("td")[0]; // Trigger Name 
     td2 = tr[i].getElementsByTagName("td")[2]; // Trigger API Version
     td3 = tr[i].getElementsByTagName("td")[3]; // Trigger Status
@@ -648,7 +738,7 @@ function searchTriggers() {
       if (
         txtValue1.toUpperCase().indexOf(searchString) > -1 ||
         txtValue2.toUpperCase().indexOf(searchString) > -1 ||
-        txtValue3.toUpperCase().indexOf(searchString) > -1 
+        txtValue3.toUpperCase().indexOf(searchString) > -1
       ) {
         tr[i].style.display = "";
       } else {
@@ -659,7 +749,7 @@ function searchTriggers() {
 }
 
 function filterTriggers() {
-  let input, table, tr, td, txtValue1;
+  let input, searchString, table, tr, td, txtValue1;
   input = document.getElementById("Object");
   searchString = input.value.toUpperCase();
   table = document.getElementById("triggersTable");
@@ -672,6 +762,35 @@ function filterTriggers() {
     if (td) {
       txtValue1 = td.textContent || td.innerText;
       if (searchString == "" || txtValue1.toUpperCase() === searchString) {
+        tr[i].style.display = "";
+      } else {
+        tr[i].style.display = "none";
+      }
+    }
+  }
+}
+
+function searchSubscriberOrgPackages() {
+  var input, filter, table, tr, td, td1, td2, i, txtValue1, txtValue2, txtValue3;
+  input = document.getElementById("searchSubscriberOrgPackage");
+  filter = input.value.toUpperCase();
+  table = document.getElementById("subscriberOrgPackagesTable");
+  tr = table.getElementsByTagName("tr");
+
+  // Loop through all table rows, and hide those who don't match the search query
+  for (i = 0; i < tr.length; i++) {
+    td = tr[i].getElementsByTagName("td")[0];
+    td1 = tr[i].getElementsByTagName("td")[1];
+    td2 = tr[i].getElementsByTagName("td")[2];
+    if (td || td1 || td2) {
+      txtValue1 = td.textContent || td.innerText;
+      txtValue2 = td1.textContent || td1.innerText;
+      txtValue3 = td2.textContent || td2.innerText;
+      if (
+        txtValue1.toUpperCase().indexOf(filter) > -1 ||
+        txtValue2.toUpperCase().indexOf(filter) > -1 ||
+        txtValue3.toUpperCase().indexOf(filter) > -1
+      ) {
         tr[i].style.display = "";
       } else {
         tr[i].style.display = "none";
