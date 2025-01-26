@@ -13,6 +13,20 @@ table {
     border: 1px solid rgb(95, 29, 29);
   }
 
+  #subscriberOrgId {
+    margin-bottom: 12px;
+  }
+
+  #CreateMeetingBtn {
+    background-image: url(https://res-1.cdn.office.net/files/fabric-cdn-prod_20230815.002/assets/brand-icons/product/svg/teams_32x1.svg);
+    height: 32px;
+    width: 32px;
+    background-repeat: no-repeat;
+    display: inline-block;
+    background-color: fff;
+    border: none;
+  }
+
   #myInput {
     background-position: 10px 12px; /* Position the search icon */
     background-repeat: no-repeat; /* Do not repeat the icon image */
@@ -68,18 +82,25 @@ tr.header, tr:hover {
 }
 
 .triggerFilterObjectContainer label,
-.triggerFilterSearch label {
+.triggerFilterSearch label, .label {
     margin-right: 5px; /* Add margin between label and input/select */
     font-size: 16px;
 }
 
-#Object,
-#searchTrigger {
+.label {
+  margin-left: 35px;
+}
+
+#Object, #searchTrigger, #subscriberOrgId, #OpenSubscriberOrgButton, .MenuButton, #searchSubscriberOrgPackage {
     flex: 1; /* Equal width for both inputs */
     padding: 8px; /* Adjust padding */
     border: 1px solid #ccc; /* Add border */
     border-radius: 0; /* Remove border radius */
     font-size: 16px;
+}
+
+.MenuButton:hover, #OpenSubscriberOrgButton:hover {
+  background-color: #e0e0e0;
 }
 
 .triggerFilterSearch input[type="text"] {

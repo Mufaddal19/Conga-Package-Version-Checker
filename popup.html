@@ -2,6 +2,8 @@
     <head>
         <script src="jsforce.js" type="text/javascript"></script>
         <link rel="stylesheet" type="text/css" href="style.css">
+        <link rel="stylesheet"
+            href="https://res-1.cdn.office.net/files/fabric-cdn-prod_20230815.002/office-ui-fabric-core/11.1.0/css/fabric.css" />
         <h1 align="center" style=" color: rgb(12, 75, 104); font-size:xx-large">Conga Debug Helper</h1></center>
 
     </head>
@@ -18,19 +20,35 @@
             <!-- When user is inside SFDC Logged IN page -->
             <div id="actions" style="margin-bottom: 20px;">
                 <p id="OrgId" style="visibility: hidden;"> <b>Org ID</b> : <span id="OrgIdValue"></span> </p>
-                <button id="btn" style="visibility: hidden;">
+                <button id="SubscriberOrgBtn" class="MenuButton" style="visibility: hidden;">
+                    View Subscriber Org
+                </button>
+                <button id="PackagesBtn" class="MenuButton" style="visibility: hidden;">
                     View Packages
                 </button>
-                <button id="ViewTriggersBtn" style="visibility: hidden;">
+                <button id="TriggersBtn" class="MenuButton" style="visibility: hidden;">
                     View Triggers
                 </button>
-                <button id="ViewCallbacksBtn" style="visibility: hidden;">
+                <button id="CallbacksBtn" class="MenuButton" style="visibility: hidden;">
                     View Callbacks
+                </button>
+                <button id="CreateMeetingBtn" title="Create Meeting" class="MenuButton" style="visibility: hidden; background-image: url('https://res-1.cdn.office.net/files/fabric-cdn-prod_20230815.002/assets/brand-icons/product/svg/teams_32x1.svg');">
+                    <!-- <img src="https://res-1.cdn.office.net/files/fabric-cdn-prod_20230815.002/assets/brand-icons/product/svg/teams_32x1.svg" alt="Create Teams Meeting"> -->
                 </button>
             </div>
             
             
             <div id="Container">
+                <div id="subscriberOrgContainer" style="display: none;">
+                    <div>
+                        <input type="text" id="subscriberOrgId" placeholder="Enter Subscriber Org Id..." />
+                        <button id="OpenSubscriberOrgButton">Open Subscriber Org</button>
+                        
+                        <label class="label" for="searchSubscriberOrgPackage">Search</label>
+                        <input type="text" id="searchSubscriberOrgPackage" placeholder="Search Subscriber Org Package...">
+                        <table id="subscriberOrgPackagesTable"></table>
+                    </div>
+                </div>
                 <div id="packagesContainer" style="display: none;">
                     <input type="text" id="myInput" placeholder="Search for Package Name..." />
                     <table id="message1"></table>
@@ -83,6 +101,6 @@
             </div>
         </center>
 
-        <script src="popup.js"></script>
+        <script type="module" src="popup.js"></script>
     </body>
 </html>
